@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 
 def create_coast_line(coast_line, printing=0):
-    coast_line_closed=coast_line[(coast_line['CIERRACOST'] == 't')&(coast_line['BAJAMAR'] == 't')&(coast_line['FEATURE'].isin(['COALNE','SLCONS']))]
+    coast_line_closed=coast_line[(coast_line['CIERRACOST'] == 't') & (coast_line['BAJAMAR'] == 't') & (coast_line['FEATURE'].isin(['COALNE','SLCONS']))]
     coast_polygon = coast_line_closed.unary_union
     coast_polygon_gdf= gpd.GeoDataFrame(geometry=[coast_polygon])
     if coast_polygon_gdf.crs is None:

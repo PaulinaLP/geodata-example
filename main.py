@@ -1,32 +1,47 @@
 import geopandas as gpd
-import shapely
 import pandas as pd
 import os
 import sys
-import matplotlib.pyplot as plt
 
 from Code import coast_line
 from Code.map_point import MapPoint
+from Code import ine_geo
+from Code import ine_data
 
-script_path = os.path.abspath(os.path.dirname(sys.argv[0]))
-output_path = os.path.join(script_path, 'output')
-input_path = os.path.join(script_path, 'input')
+# global variables
+SCRIPT_PATH = os.path.abspath(os.path.dirname(sys.argv[0]))
+OUTPUT_PATH = os.path.join(SCRIPT_PATH, 'output')
+INPUT_PATH = os.path.join(SCRIPT_PATH, 'input')
 
-coast_ln=gpd.read_file(os.path.join(input_path, 'lineaCosta\\COSTA.shp'))
-coast_polygon_gdf = coast_line.create_coast_line(coast_ln, printing=0)
 
 if __name__ == '__main__':
-    # creating the polygon of coast line
-    coast_ln = gpd.read_file(os.path.join(input_path, 'lineaCosta\\COSTA.shp'))
+    # loading coast data
+    coast_ln = gpd.read_file(os.path.join(INPUT_PATH, 'lineaCosta\\COSTA.shp'))
     coast_gdf = coast_line.create_coast_line(coast_ln, printing=0)
-    # Reproject to EPSG:3857 (Pseudo-Mercator)
-    coast_gdf_3857 = coast_gdf.to_crs(epsg=3857)
-    # Define the random points for Madrid and Barcelona
-    madrid = MapPoint(-3.7038, 40.4168, name='Madrid')
-    barcelona = MapPoint(2.1734, 41.3851, name='Barcelona')
-    madrid.change_crs(3857)
-    barcelona.change_crs(3857)
-    madrid.calculate_distance(coast_gdf_3857,'coast',printing=1)
-    barcelona.calculate_distance(coast_gdf_3857, 'coast', printing=1)
+    # loading ine data for matching geo points with corresponding section
+    ine_sections = gpd.read_file(os.path.join(INPUT_PATH, 'ine\\SECC_CE_20240101.shp'))
+    # loading ine data for sections (income & demography)
+    ine_income_data = pd.read_csv(os.path.join(INPUT_PATH, 'ine_data\\30824.csv'), sep=';')
+    ine_demography_data = pd.read_csv(os.path.join(INPUT_PATH, 'ine_data\\30832.csv'), sep=';')
+    # preprocessing the tables
+    pivot_income = ine_data.get_last_data(ine_income_data, ine_type='income')
+    pivot_demography = ine_data.get_last_data(ine_demography_data, ine_type='demo')
+    # deleting original tables to get more memory
+    del ine_demography_data
+    del ine_income_data
+    # selecting 2 points (as example)
+    madrid = MapPoint(-3.7038, 40.4168, name='Madrid - centre')
+    barcelona = MapPoint(2.1734, 41.3851, name='Barcelona - centre')
+    for spanish_point in [madrid, barcelona]:
+        # showing the distance between the point and the coast
+        distance = spanish_point.calculate_distance(coast_gdf,'coast', printing=1)
+        # showing the section number for the point
+        cusec = ine_geo.ine_get_cusec(spanish_point, ine_sections, printing=1)
+        # showing income and demo data for the point
+        ine_data.get_section_data(pivot_income, cusec, printing=1)
+        ine_data.get_section_data(pivot_demography, cusec, printing=1)
 
-#ine_sections=gpd.read_file(os.path.join(input_path, 'ine\\SECC_CE_20240101.shp'))
+
+
+
+
